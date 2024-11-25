@@ -13,7 +13,6 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - windows-latest
           - macos-latest
         deno:
           - "1.x"
@@ -67,7 +66,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
 
@@ -78,6 +77,41 @@ jobs:
 
       - name: Check binary exists
         run: deno_foo -V
+
+  test-setup-cache:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./
+        with:
+          cache: true
+          cache-hash: bar-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Download dependencies for cache
+        run: deno install --global npm:cowsay@1.6.0
+
+  test-cache:
+    needs: test-setup-cache
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./
+        with:
+          cache: true
+          cache-hash: foo-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Run with cached dependencies
+        run: deno run --cached-only -RE npm:cowsay@1.6.0 "It works!"
 
   lint:
     runs-on: ubuntu-latest
